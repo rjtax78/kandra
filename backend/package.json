@@ -6,11 +6,15 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "db:setup": "node ../setup-database.js",
-    "db:check": "node ../setup-database.js --check",
+    "db:setup": "node setup-database.js",
+    "db:check": "node setup-database.js --check",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "node migrate.js",
+    "db:migrate:kit": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:seed": "node seed.js",
+    "setup:dev": "node setup-dev.js",
+    "test:api": "node test-api.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
