@@ -1,0 +1,162 @@
+-- migrations.sql (déjà fournis dans la conversation, reproduits ici)
+CREATE DATABASE IF NOT EXISTS linkedin_clone CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE linkedin_clone;
+
+CREATE TABLE IF NOT EXISTS Utilisateur (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  AdministrateurID INT DEFAULT NULL,
+  IdUtilisateur VARCHAR(255) DEFAULT NULL,
+  Email VARCHAR(255) UNIQUE NOT NULL,
+  MotDePasse VARCHAR(255) NOT NULL,
+  DateInscription DATETIME DEFAULT CURRENT_TIMESTAMP,
+  StatutCompte VARCHAR(50) DEFAULT 'active'
+);
+
+CREATE TABLE IF NOT EXISTS Administrateur (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  IdAdmin VARCHAR(255) DEFAULT NULL,
+  NiveauAcces VARCHAR(50) DEFAULT 'moderateur'
+);
+
+CREATE TABLE IF NOT EXISTS Entreprise (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  UtilisateurID INT DEFAULT NULL,
+  IdEntreprise VARCHAR(255) DEFAULT NULL,
+  EntrepriseNom VARCHAR(255),
+  SecteurActivite VARCHAR(255),
+  Description TEXT,
+  AdresseSiege VARCHAR(255),
+  Contact VARCHAR(255),
+  EmailContact VARCHAR(255),
+  LogoUrl VARCHAR(255),
+  StatutValidation VARCHAR(50),
+  FOREIGN KEY (UtilisateurID) REFERENCES Utilisateur(ID) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS Partenaire (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  OpportuniteID INT DEFAULT NULL,
+  UtilisateurID INT DEFAULT NULL,
+  IdPartenaire VARCHAR(255),
+  NomPartenaire VARCHAR(255),
+  TypeOrganisation VARCHAR(255),
+  PersonneContact VARCHAR(255),
+  TelephoneContact VARCHAR(50),
+  FOREIGN KEY (OpportuniteID) REFERENCES Opportunite(ID) ON DELETE SET NULL,
+  FOREIGN KEY (UtilisateurID) REFERENCES Utilisateur(ID) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS Convention (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  EntrepriseID INT DEFAULT NULL,
+  IdConvention VARCHAR(255),
+  Titre VARCHAR(255),
+  Attributs VARCHAR(255),
+  DateSignature DATE,
+  DateExpiration DATE,
+  Details TEXT,
+  StatutConvention VARCHAR(50),
+  UrlDocument VARCHAR(255),
+  FOREIGN KEY (EntrepriseID) REFERENCES Entreprise(ID) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS Opportunite (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  AdministrateurID INT DEFAULT NULL,
+  EntrepriseID INT DEFAULT NULL,
+  IdOpportunite VARCHAR(255),
+  Titre VARCHAR(255),
+  TypeOpportunite VARCHAR(255),
+  Description TEXT,
+  Localisation VARCHAR(255),
+  Remuneration VARCHAR(100),
+  DatePublication DATE,
+  DateDebutCandidature DATE,
+  DateFinCandidature DATE,
+  StatutOpportunite VARCHAR(50),
+  Vues INT DEFAULT 0,
+  FOREIGN KEY (AdministrateurID) REFERENCES Administrateur(ID) ON DELETE SET NULL,
+  FOREIGN KEY (EntrepriseID) REFERENCES Entreprise(ID) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS Candidat (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  OpportuniteID INT DEFAULT NULL,
+  CVID INT DEFAULT NULL,
+  UtilisateurID INT DEFAULT NULL,
+  IdCandidat VARCHAR(255),
+  Nom VARCHAR(255),
+  Prenom VARCHAR(255),
+  DateNaissance DATE,
+  Adresse VARCHAR(255),
+  TelephoneContact VARCHAR(50),
+  NiveauEtude VARCHAR(100),
+  Specialisation VARCHAR(255),
+  ProfilComplet BOOLEAN DEFAULT FALSE,
+  PreferenceRecherche VARCHAR(255),
+  FOREIGN KEY (OpportuniteID) REFERENCES Opportunite(ID) ON DELETE SET NULL,
+  FOREIGN KEY (CVID) REFERENCES CV(ID) ON DELETE SET NULL,
+  FOREIGN KEY (UtilisateurID) REFERENCES Utilisateur(ID) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS Candidature (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  CVID INT DEFAULT NULL,
+  OpportuniteID INT DEFAULT NULL,
+  CandidatID INT DEFAULT NULL,
+  IdCandidature VARCHAR(255),
+  DateCandidature DATETIME DEFAULT CURRENT_TIMESTAMP,
+  Statut VARCHAR(50) DEFAULT 'soumis',
+  Motivation TEXT,
+  FOREIGN KEY (CVID) REFERENCES CV(ID) ON DELETE SET NULL,
+  FOREIGN KEY (OpportuniteID) REFERENCES Opportunite(ID) ON DELETE CASCADE,
+  FOREIGN KEY (CandidatID) REFERENCES Candidat(ID) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS CV (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  IdCV VARCHAR(255),
+  NomFichier VARCHAR(255),
+  UrlFichier VARCHAR(255),
+  DateTelechargement DATETIME DEFAULT CURRENT_TIMESTAMP,
+  ContenuParse TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Ressource (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  AdministrateurID INT DEFAULT NULL,
+  IdRessource VARCHAR(255),
+  Titre VARCHAR(255),
+  UrlContenu VARCHAR(255),
+  TypeRessource VARCHAR(100),
+  DatePublication DATE,
+  Auteur VARCHAR(255),
+  FOREIGN KEY (AdministrateurID) REFERENCES Administrateur(ID) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS Statistique (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  AdministrateurID INT DEFAULT NULL,
+  IdStatistique VARCHAR(255),
+  TypeStatistique VARCHAR(100),
+  Valeur FLOAT DEFAULT 0,
+  DateGeneration DATETIME,
+  PeriodeDebut DATE,
+  PeriodeFin DATE,
+  Filtre VARCHAR(255),
+  FOREIGN KEY (AdministrateurID) REFERENCES Administrateur(ID) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS AlerteRecommendation (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  OpportuniteID INT DEFAULT NULL,
+  CandidatID INT DEFAULT NULL,
+  IdAlerteRecommendation VARCHAR(255),
+  Type VARCHAR(100),
+  Contenu TEXT,
+  DateCreation DATETIME DEFAULT CURRENT_TIMESTAMP,
+  DateEnvoi DATETIME DEFAULT NULL,
+  Lue BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (OpportuniteID) REFERENCES Opportunite(ID) ON DELETE SET NULL,
+  FOREIGN KEY (CandidatID) REFERENCES Candidat(ID) ON DELETE SET NULL
+);
