@@ -1,6 +1,6 @@
 import { db } from '../db/drizzle.js';
-import { offres, entreprises, offresStage, offresEmploi } from '../db/schema.js';
-import { eq, desc } from 'drizzle-orm';
+import { offres, entreprises, offresStage, offresEmploi, candidatures } from '../db/schema.js';
+import { eq, desc, count, and } from 'drizzle-orm';
 
 export async function createOpportunite(req, res) {
   try {
@@ -185,5 +185,247 @@ export async function getOpportunite(req, res) {
   } catch (err) {
     console.error('Get offre error:', err);
     res.status(500).json({ error: 'Erreur serveur lors de la récupération de l\'offre' });
+  }
+}
+
+// Get company's job offers
+export async function getCompanyOffers(req, res) {
+  try {
+    const userId = req.user.id;
+    const { statut, typeOffre, limit = 50, offset = 0 } = req.query;
+
+    // Verify user is a company
+    const company = await db.select()
+      .from(entreprises)
+      .where(eq(entreprises.id, userId));
+    
+    if (company.length === 0) {
+      return res.status(403).json({ error: 'Accès réservé aux entreprises' });
+    }
+
+    let query = db.select({
+      id: offres.id,
+      titre: offres.titre,
+      description: offres.description,
+      typeOffre: offres.typeOffre,
+      localisation: offres.localisation,
+      salaire: offres.salaire,
+      datePublication: offres.datePublication,
+      dateExpiration: offres.dateExpiration,
+      statut: offres.statut,
+      nombrePostes: offres.nombrePostes,
+      niveauEtude: offres.niveauEtude,
+      competencesRequises: offres.competencesRequises,
+      createdAt: offres.createdAt,
+      updatedAt: offres.updatedAt
+    })
+    .from(offres)
+    .where(eq(offres.entrepriseId, userId))
+    .orderBy(desc(offres.createdAt))
+    .limit(parseInt(limit))
+    .offset(parseInt(offset));
+
+    // Apply filters
+    if (statut) {
+      query = query.where(and(eq(offres.entrepriseId, userId), eq(offres.statut, statut)));
+    }
+    if (typeOffre) {
+      query = query.where(and(eq(offres.entrepriseId, userId), eq(offres.typeOffre, typeOffre)));
+    }
+
+    const offers = await query;
+
+    // Get application counts for each offer
+    const offersWithApplications = await Promise.all(
+      offers.map(async (offer) => {
+        const applicationCount = await db.select({ count: count() })
+          .from(candidatures)
+          .where(eq(candidatures.offreId, offer.id));
+        
+        return {
+          ...offer,
+          applicants: applicationCount[0]?.count || 0
+        };
+      })
+    );
+
+    res.json({
+      offers: offersWithApplications,
+      total: offersWithApplications.length
+    });
+  } catch (err) {
+    console.error('Get company offers error:', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération des offres' });
+  }
+}
+
+// Update job offer
+export async function updateOpportunite(req, res) {
+  try {
+    const userId = req.user.id;
+    const offreId = req.params.id;
+    const {
+      titre, typeOffre, description, localisation, salaire,
+      dateExpiration, niveauEtude, competencesRequises, statut, nombrePostes,
+      // Stage-specific fields
+      duree, estRemunere, montantRemuneration, dateDebut, objectifs,
+      // Job-specific fields
+      typeContrat, experienceRequise, avantages, estNegociable
+    } = req.body;
+
+    // Check if offer exists and belongs to the company
+    const existingOffer = await db.select()
+      .from(offres)
+      .where(and(eq(offres.id, offreId), eq(offres.entrepriseId, userId)));
+    
+    if (existingOffer.length === 0) {
+      return res.status(404).json({ error: 'Offre non trouvée ou accès non autorisé' });
+    }
+
+    // Update main offer data
+    const updateData = {};
+    if (titre) updateData.titre = titre;
+    if (description) updateData.description = description;
+    if (localisation) updateData.localisation = localisation;
+    if (salaire) updateData.salaire = salaire;
+    if (dateExpiration) updateData.dateExpiration = new Date(dateExpiration);
+    if (niveauEtude) updateData.niveauEtude = niveauEtude;
+    if (competencesRequises) updateData.competencesRequises = competencesRequises;
+    if (statut) updateData.statut = statut;
+    if (nombrePostes) updateData.nombrePostes = nombrePostes;
+
+    await db.update(offres)
+      .set(updateData)
+      .where(eq(offres.id, offreId));
+
+    // Update type-specific details if provided
+    if (existingOffer[0].typeOffre === 'stage' && (duree || estRemunere !== undefined || montantRemuneration || dateDebut || objectifs)) {
+      const stageUpdateData = {};
+      if (duree) stageUpdateData.duree = duree;
+      if (estRemunere !== undefined) stageUpdateData.estRemunere = estRemunere ? 1 : 0;
+      if (montantRemuneration) stageUpdateData.montantRemuneration = montantRemuneration;
+      if (dateDebut) stageUpdateData.dateDebut = new Date(dateDebut);
+      if (objectifs) stageUpdateData.objectifs = objectifs;
+
+      await db.update(offresStage)
+        .set(stageUpdateData)
+        .where(eq(offresStage.id, offreId));
+    }
+
+    if (existingOffer[0].typeOffre === 'emploi' && (typeContrat || experienceRequise || avantages || estNegociable !== undefined)) {
+      const emploiUpdateData = {};
+      if (typeContrat) emploiUpdateData.typeContrat = typeContrat;
+      if (experienceRequise) emploiUpdateData.experienceRequise = experienceRequise;
+      if (avantages) emploiUpdateData.avantages = avantages;
+      if (estNegociable !== undefined) emploiUpdateData.estNegociable = estNegociable ? 1 : 0;
+
+      await db.update(offresEmploi)
+        .set(emploiUpdateData)
+        .where(eq(offresEmploi.id, offreId));
+    }
+
+    // Get updated offer
+    const updatedOffer = await db.select()
+      .from(offres)
+      .where(eq(offres.id, offreId));
+
+    res.json({
+      message: 'Offre mise à jour avec succès',
+      offer: updatedOffer[0]
+    });
+  } catch (err) {
+    console.error('Update offer error:', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la mise à jour de l\'offre' });
+  }
+}
+
+// Delete job offer
+export async function deleteOpportunite(req, res) {
+  try {
+    const userId = req.user.id;
+    const offreId = req.params.id;
+
+    // Check if offer exists and belongs to the company
+    const existingOffer = await db.select()
+      .from(offres)
+      .where(and(eq(offres.id, offreId), eq(offres.entrepriseId, userId)));
+    
+    if (existingOffer.length === 0) {
+      return res.status(404).json({ error: 'Offre non trouvée ou accès non autorisé' });
+    }
+
+    // Check if there are any applications
+    const applicationCount = await db.select({ count: count() })
+      .from(candidatures)
+      .where(eq(candidatures.offreId, offreId));
+
+    if (applicationCount[0]?.count > 0) {
+      // Archive instead of delete if there are applications
+      await db.update(offres)
+        .set({ statut: 'archivee' })
+        .where(eq(offres.id, offreId));
+      
+      res.json({ message: 'Offre archivée avec succès (des candidatures existent)' });
+    } else {
+      // Delete the offer (cascading will handle related records)
+      await db.delete(offres)
+        .where(eq(offres.id, offreId));
+      
+      res.json({ message: 'Offre supprimée avec succès' });
+    }
+  } catch (err) {
+    console.error('Delete offer error:', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la suppression de l\'offre' });
+  }
+}
+
+// Get company dashboard statistics
+export async function getCompanyStats(req, res) {
+  try {
+    const userId = req.user.id;
+
+    // Verify user is a company
+    const company = await db.select()
+      .from(entreprises)
+      .where(eq(entreprises.id, userId));
+    
+    if (company.length === 0) {
+      return res.status(403).json({ error: 'Accès réservé aux entreprises' });
+    }
+
+    // Get offer statistics
+    const allOffers = await db.select({
+      statut: offres.statut,
+      id: offres.id
+    })
+    .from(offres)
+    .where(eq(offres.entrepriseId, userId));
+
+    const stats = {
+      totalOffers: allOffers.length,
+      activeOffers: allOffers.filter(o => o.statut === 'publiee').length,
+      draftOffers: allOffers.filter(o => o.statut === 'brouillon').length,
+      archivedOffers: allOffers.filter(o => o.statut === 'archivee').length,
+      totalApplications: 0,
+      avgApplicationsPerOffer: 0
+    };
+
+    // Get application statistics
+    if (allOffers.length > 0) {
+      const applicationStats = await db.select({ count: count() })
+        .from(candidatures)
+        .leftJoin(offres, eq(candidatures.offreId, offres.id))
+        .where(eq(offres.entrepriseId, userId));
+      
+      stats.totalApplications = applicationStats[0]?.count || 0;
+      stats.avgApplicationsPerOffer = stats.totalOffers > 0 
+        ? Math.round(stats.totalApplications / stats.totalOffers) 
+        : 0;
+    }
+
+    res.json(stats);
+  } catch (err) {
+    console.error('Get company stats error:', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération des statistiques' });
   }
 }

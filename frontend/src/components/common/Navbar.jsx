@@ -1,0 +1,231 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Search, Bell, MessageSquare, Grid3X3, User, LogOut, Settings, Briefcase, Users, Building2, Home } from 'lucide-react';
+import { useUser, useClerk } from '@clerk/clerk-react';
+import { getUserRole, USER_ROLES } from '../../utils/roleUtils';
+
+const Navbar = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef(null);
+  const userRole = getUserRole(user);
+
+  // Role-based navigation items
+  const getNavItems = () => {
+    switch (userRole) {
+      case USER_ROLES.STUDENT:
+        return [
+          { name: 'Browse Jobs', href: '/dokarti', icon: Briefcase, active: location.pathname === '/dokarti' },
+          { name: 'My Applications', href: '/etudiant/applications', icon: User, active: location.pathname === '/etudiant/applications' },
+          { name: 'Profile', href: '/profile', icon: User, active: location.pathname === '/profile' },
+        ];
+      case USER_ROLES.COMPANY:
+        return [
+          { name: 'Dashboard', href: '/company/dashboard', icon: Home, active: location.pathname === '/company/dashboard' },
+          { name: 'Post Job', href: '/company/post-job', icon: Briefcase, active: location.pathname === '/company/post-job' },
+          { name: 'Applications', href: '/company/applications', icon: Users, active: location.pathname === '/company/applications' },
+        ];
+      case USER_ROLES.ADMIN:
+        return [
+          { name: 'Admin Dashboard', href: '/admin/dashboard', icon: Home, active: location.pathname === '/admin/dashboard' },
+          { name: 'Users', href: '/admin/users', icon: Users, active: location.pathname === '/admin/users' },
+          { name: 'Companies', href: '/admin/companies', icon: Building2, active: location.pathname === '/admin/companies' },
+        ];
+      default:
+        return [
+          { name: 'Find Work', href: '/etudiant/offres', icon: Briefcase, active: location.pathname === '/etudiant/offres' },
+          { name: 'My Jobs', href: '/etudiant/jobs', icon: User, active: false },
+        ];
+    }
+  };
+
+  const navItems = getNavItems();
+
+  const handleSignOut = async () => {
+    const confirmSignOut = window.confirm('Are you sure you want to sign out?');
+    if (!confirmSignOut) return;
+    
+    try {
+      await signOut();
+      setShowUserMenu(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-4 h-4 bg-white rounded-sm"></div>
+              </div>
+              <span className="text-xl font-bold text-gray-900">Kandra</span>
+            </Link>
+          </div>
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center space-x-6">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    item.active
+                      ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Right Side Icons */}
+          <div className="flex items-center space-x-4">
+            {/* Search Icon */}
+            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <Search className="w-5 h-5" />
+            </button>
+
+            {/* Notifications */}
+            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors relative">
+              <Bell className="w-5 h-5" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+            </button>
+
+            {/* Messages */}
+            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <MessageSquare className="w-5 h-5" />
+            </button>
+
+            {/* Grid Menu */}
+            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <Grid3X3 className="w-5 h-5" />
+            </button>
+
+            {/* User Avatar */}
+            <div className="relative" ref={menuRef}>
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                {user?.profileImageUrl ? (
+                  <img 
+                    src={user.profileImageUrl} 
+                    alt={user.firstName || 'User'}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                {user?.firstName && (
+                  <span className="hidden md:block text-sm font-medium text-gray-700">
+                    {user.firstName}
+                  </span>
+                )}
+              </button>
+
+              {/* User Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
+                    <p className="text-xs text-gray-500 mb-2">{user?.primaryEmailAddress?.emailAddress}</p>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      userRole === USER_ROLES.ADMIN ? 'bg-red-100 text-red-800' :
+                      userRole === USER_ROLES.COMPANY ? 'bg-purple-100 text-purple-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {userRole === USER_ROLES.ADMIN ? '👩‍💼 Admin' :
+                       userRole === USER_ROLES.COMPANY ? '🏢 Company' :
+                       '👨‍🎓 Student'}
+                    </span>
+                  </div>
+                  
+                  <Link 
+                    to="/profile" 
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <User className="w-4 h-4 mr-3" />
+                    Profile
+                  </Link>
+                  
+                  <Link 
+                    to="/settings" 
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <Settings className="w-4 h-4 mr-3" />
+                    Settings
+                  </Link>
+                  
+                  {/* Role switcher for testing (admin only) */}
+                  {userRole === USER_ROLES.ADMIN && (
+                    <>
+                      <hr className="my-1" />
+                      <div className="px-4 py-2">
+                        <p className="text-xs text-gray-500 mb-1">Quick Role Test:</p>
+                        <div className="flex gap-1">
+                          <button className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded" onClick={() => {
+                            // This would update user metadata in a real app
+                            alert('In production, this would switch to Student role');
+                            setShowUserMenu(false);
+                          }}>Student</button>
+                          <button className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded" onClick={() => {
+                            alert('In production, this would switch to Company role');
+                            setShowUserMenu(false);
+                          }}>Company</button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  <hr className="my-1" />
+                  
+                  <button 
+                    onClick={handleSignOut}
+                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut className="w-4 h-4 mr-3" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default Navbar;

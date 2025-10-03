@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'kandra_spray_info_secret_key_2025';
 
 export default function auth(req, res, next) {
   const header = req.headers.authorization;

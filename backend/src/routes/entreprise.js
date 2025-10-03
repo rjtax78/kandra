@@ -1,9 +1,9 @@
 import express from 'express';
 import auth from '../middlewares/authMiddleware.js';
-import { createEntreprise, listEntreprises, getEntreprise } from '../controllers/entrepriseController.js';
+import { updateProfilEntreprise, listEntreprises, getEntreprise } from '../controllers/entrepriseController.js';
 
 const router = express.Router();
-router.post('/', auth, createEntreprise);
+router.put('/profil', auth, updateProfilEntreprise);
 router.get('/', auth, listEntreprises);
 router.get('/:id', auth, getEntreprise);
 

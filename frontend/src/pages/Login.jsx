@@ -1,274 +1,231 @@
-import { useState, useEffect } from "react";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Checkbox } from '../components/ui/checkbox';
+import { Card, CardContent } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
 
-// Composant générique pour les icônes
-const Icon = ({ type, className, size = 20 }) => {
-  const icons = {
-    Mail: <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>,
-    Lock: <>
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-      <circle cx="12" cy="16" r="1"/>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </>,
-    Eye: <>
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-      <circle cx="12" cy="12" r="3"/>
-    </>,
-    EyeOff: <>
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>,
-      <line x1="1" y1="1" x2="23" y2="23"/>
-    </>,
-    Linkedin: <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-  };
-
-  return (
-    <svg
-      className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill={type === "Linkedin" ? "currentColor" : "none"}
-      stroke={type !== "Linkedin" ? "currentColor" : "none"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {icons[type]}
-    </svg>
-  );
-};
-
-// Composant générique pour les champs de formulaire
-const InputField = ({ name, value, onChange, placeholder, type, iconType, focusedField, setFocusedField, error, showPasswordToggle }) => (
-  <div className="relative">
-    <div className={`relative transition-all duration-300 ${focusedField === name || value ? 'transform scale-[1.02]' : ''}`}>
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <Icon type={iconType} className={`transition-colors duration-300 ${focusedField === name ? 'text-blue-500' : 'text-gray-400'}`} />
+const CryptoIllustration = () => (
+  <div className="relative w-full h-full flex items-center justify-center">
+    {/* Main 3D Platform */}
+    <div className="relative">
+      {/* Base Platform */}
+      <div className="w-48 h-20 bg-gradient-to-b from-blue-400 to-blue-600 rounded-2xl shadow-2xl transform perspective-1000 rotateX-[15deg]" />
+      
+      {/* Cylinder Container */}
+      <div className="absolute top-[-60px] left-1/2 transform -translate-x-1/2">
+        <div className="w-24 h-32 bg-gradient-to-b from-gray-700 to-gray-900 rounded-lg relative">
+          {/* Top Circle */}
+          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-28 h-6 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full" />
+          
+          {/* Crypto Symbol */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <div className="w-4 h-4 bg-gradient-to-br from-orange-400 to-orange-600 rounded-sm" />
+            </div>
+          </div>
+          
+          {/* Data Visualization */}
+          <div className="absolute bottom-4 left-2 right-2">
+            <div className="w-full h-3 bg-gradient-to-r from-cyan-400 to-blue-500 rounded opacity-80" />
+          </div>
+        </div>
       </div>
-      <input
-        name={name}
-        value={value}
-        onChange={onChange}
-        onFocus={() => setFocusedField(name)}
-        onBlur={() => setFocusedField(null)}
-        type={type}
-        placeholder={placeholder}
-        required
-        className={`w-full pl-12 pr-12 py-4 rounded-xl border-2 transition-all duration-300 focus:outline-none ${
-          error ? 'border-red-300 bg-red-50' : focusedField === name ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-100' : 'border-gray-200 bg-white hover:border-gray-300'
-        }`}
-      />
-      {showPasswordToggle && (
-        <button
-          type="button"
-          onClick={showPasswordToggle}
-          className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <Icon type={type === 'password' ? 'Eye' : 'EyeOff'} />
-        </button>
-      )}
+      
+      {/* Robotic Arms */}
+      <div className="absolute top-[-20px] left-[-30px]">
+        <div className="w-16 h-3 bg-gradient-to-r from-gray-400 to-gray-600 rounded-full transform rotate-[-25deg]" />
+        <div className="absolute right-0 top-[-2px] w-8 h-7 bg-gradient-to-b from-gray-500 to-gray-700 rounded" />
+      </div>
+      
+      <div className="absolute top-[-20px] right-[-30px]">
+        <div className="w-16 h-3 bg-gradient-to-r from-gray-400 to-gray-600 rounded-full transform rotate-[25deg]" />
+        <div className="absolute left-0 top-[-2px] w-8 h-7 bg-gradient-to-b from-gray-500 to-gray-700 rounded" />
+      </div>
+      
+      {/* Floating Elements */}
+      <div className="absolute -top-16 -left-12 w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl opacity-20 animate-pulse" />
+      <div className="absolute -top-12 -right-16 w-20 h-20 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-3xl opacity-20 animate-pulse delay-1000" />
+      <div className="absolute -bottom-8 -left-20 w-12 h-12 bg-gradient-to-br from-pink-400 to-red-500 rounded-xl opacity-20 animate-pulse delay-2000" />
     </div>
-    {error && <p className="mt-2 text-sm text-red-600 animate-slideDown">{error}</p>}
   </div>
 );
 
-// Composant générique pour les boutons OAuth
-const OAuthButton = ({ provider, label, colorClass, gradientClass, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`w-full flex items-center justify-center gap-3 ${gradientClass} py-4 px-6 rounded-xl text-white font-medium hover:shadow-md transition-all duration-300 transform hover:scale-[1.02]`}
-  >
-    <div className={`w-6 h-6 ${colorClass} rounded-full flex items-center justify-center text-white font-bold text-xs`}>
-      {provider[0].toUpperCase()}
-    </div>
-    <span>{label}</span>
-  </button>
-);
-
 export default function Login() {
-  const [form, setForm] = useState({ Email: "", MotDePasse: "" });
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState(null);
-  const [formErrors, setFormErrors] = useState({});
-  const [animationClass, setAnimationClass] = useState("animate-fadeIn");
-
-  useEffect(() => {
-    setTimeout(() => setAnimationClass("animate-slideInUp"), 100);
-  }, []);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-    if (formErrors[name]) setFormErrors({ ...formErrors, [name]: "" });
-  };
-
-  const validateForm = () => {
-    const errors = {};
-    if (!form.Email) errors.Email = "L'email est requis";
-    else if (!/\S+@\S+\.\S+/.test(form.Email)) errors.Email = "Format d'email invalide";
-    if (!form.MotDePasse) errors.MotDePasse = "Le mot de passe est requis";
-    else if (form.MotDePasse.length < 6) errors.MotDePasse = "Le mot de passe doit contenir au moins 6 caractères";
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleOAuth = (provider) => {
-    const backendOrigin = window.location.origin.replace(/:\d+$/, ":5000");
-    window.location.href = `${backendOrigin}/api/auth/${provider}`;
-  };
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-    setLoading(true);
+    setIsLoading(true);
+    
+    // Simulate login
     setTimeout(() => {
-      setLoading(false);
-      alert("Connexion simulée réussie !");
-    }, 2000);
+      setIsLoading(false);
+      navigate('/dokarti');
+    }, 1500);
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-blue-50 via-white to-blue-100">
-      {/* Particules */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 bg-blue-400 rounded-full opacity-20 animate-float"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${i * 0.5}s`,
-              animationDuration: `${3 + Math.random() * 2}s`
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Formulaire */}
-      <div className={`w-full md:w-1/2 flex flex-col justify-center px-8 md:px-20 py-12 relative z-10 ${animationClass}`}>
-        <div className="max-w-md mx-auto w-full">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4 shadow-lg">
-              <Icon type="Linkedin" className="text-white" />
-            </div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">Bienvenu sur le plateforme KANDRA !</h1>
-            <p className="text-gray-600">Restez connecté avec votre réseau professionnel</p>
-          </div>
-
-          {/* OAuth */}
-          <div className="space-y-3 mb-6">
-            <OAuthButton provider="google" label="Continuer avec Google" colorClass="bg-gradient-to-r from-red-500 to-yellow-500" gradientClass="bg-white text-gray-700 border-2 border-gray-200" onClick={() => handleOAuth("google")} />
-            <OAuthButton provider="facebook" label="Continuer avec Facebook" colorClass="bg-blue-600" gradientClass="bg-white text-gray-700 border-2 border-gray-200" onClick={() => handleOAuth("facebook")} />
-          </div>
-
-          {/* Séparateur */}
-          <div className="flex items-center my-8">
-            <div className="flex-grow border-t-2 border-gray-200" />
-            <span className="px-4 text-gray-500 text-sm font-medium bg-white">ou</span>
-            <div className="flex-grow border-t-2 border-gray-200" />
-          </div>
-
-          {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <InputField
-              name="Email"
-              value={form.Email}
-              onChange={handleChange}
-              placeholder="Adresse email"
-              type="email"
-              iconType="Mail"
-              focusedField={focusedField}
-              setFocusedField={setFocusedField}
-              error={formErrors.Email}
-            />
-            <InputField
-              name="MotDePasse"
-              value={form.MotDePasse}
-              onChange={handleChange}
-              placeholder="Mot de passe"
-              type={showPassword ? "text" : "password"}
-              iconType="Lock"
-              focusedField={focusedField}
-              setFocusedField={setFocusedField}
-              error={formErrors.MotDePasse}
-              showPasswordToggle={() => setShowPassword(!showPassword)}
-            />
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center cursor-pointer">
-                <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                <span className="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
-              </label>
-              <button type="button" className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline">
-                Mot de passe oublié ?
-              </button>
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Left Panel - Login Form */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <Card className="w-full max-w-md bg-white shadow-xl border-0">
+          <CardContent className="p-8">
+            {/* Logo */}
+            <div className="flex items-center gap-2 mb-8">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <div className="w-4 h-4 bg-white rounded-sm" />
+              </div>
+              <span className="text-2xl font-bold text-gray-900">Cryptonext</span>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl font-semibold shadow-lg transition-all duration-300 transform ${
-                loading ? 'opacity-80 cursor-not-allowed' : 'hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
-              }`}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Connexion en cours...</span>
+            {/* Tab Navigation */}
+            <div className="flex mb-8">
+              <div className="border-b-2 border-blue-500 pb-2 pr-4">
+                <span className="text-blue-600 font-semibold">Login</span>
+              </div>
+              <Link to="/register" className="pb-2 pl-4 text-gray-500 hover:text-gray-700">
+                Sign Up
+              </Link>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Email Field */}
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  Email Address
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email address..."
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    required
+                  />
                 </div>
-              ) : (
-                "Se connecter"
-              )}
-            </button>
-          </form>
+              </div>
 
-          <div className="text-center mt-8">
-            <p className="text-gray-600">
-              Nouveau sur la plateforme ?{" "}
-              <button type="button" className="text-blue-600 font-semibold hover:text-blue-700 transition-colors hover:underline">
-                Rejoignez-nous maintenant
-              </button>
-            </p>
-          </div>
-        </div>
+              {/* Password Field */}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password..."
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me & Forgot Password */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="remember" 
+                    checked={rememberMe}
+                    onCheckedChange={setRememberMe}
+                  />
+                  <Label htmlFor="remember" className="text-sm text-gray-600">
+                    Remember me
+                  </Label>
+                </div>
+                <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
+                  Forgot Password?
+                </Link>
+              </div>
+
+              {/* Login Button */}
+              <Button
+                type="submit"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Signing in...
+                  </div>
+                ) : (
+                  'Login'
+                )}
+              </Button>
+
+              {/* Separator */}
+              <div className="relative">
+                <Separator />
+                <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
+                  OR
+                </span>
+              </div>
+
+              {/* OAuth Buttons */}
+              <div className="space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12 border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-blue-600 rounded mr-2" />
+                  Continue with Google
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12 border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <div className="w-5 h-5 bg-gray-800 rounded mr-2" />
+                  Continue with Apple
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12 border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <div className="w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded mr-2" />
+                  Continue with Wallet
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Illustration */}
-      <div className="hidden md:flex w-1/2 items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-32 h-32 bg-white/10 rounded-full animate-pulse" />
-          <div className="absolute bottom-20 right-20 w-24 h-24 bg-white/10 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-10 w-16 h-16 bg-white/10 rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
-        </div>
-        <div className="relative z-10 text-center text-white p-12">
-          <h2 className="text-4xl font-bold mb-6">Connectez-vous avec votre réseau professionnel</h2>
-          <p className="text-xl opacity-90 mb-8">Plus de 750 millions de membres utilisent notre plateforme pour construire leur carrière</p>
-          <div className="grid grid-cols-2 gap-8 mt-12">
-            <div className="text-center">
-              <div className="text-3xl font-bold">750M+</div>
-              <div className="text-sm opacity-80">Membres actifs</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold">200+</div>
-              <div className="text-sm opacity-80">Pays et régions</div>
-            </div>
-          </div>
-        </div>
+      {/* Right Panel - Illustration */}
+      <div className="flex-1 bg-gradient-to-br from-blue-500 via-purple-600 to-cyan-500 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-transparent" />
+        <CryptoIllustration />
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
-        .animate-slideInUp { animation: slideInUp 0.6s ease-out; }
-        .animate-slideDown { animation: slideDown 0.3s ease-out; }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-      `}</style>
     </div>
   );
 }

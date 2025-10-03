@@ -1,55 +1,210 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Opportunities from './pages/Opportunities';
-import OpportunityDetail from './pages/OpportunityDetail';
-import Entreprises from './pages/Entreprises';
-import Candidatures from './pages/Candidatures';
-import Profil from './pages/Profil';
-import Ressources from './pages/Ressources';
-import Statistiques from './pages/Statistiques';
-import { setToken } from './services/api';
+import React from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { SignedIn } from "@clerk/clerk-react";
+import { AuthProvider } from "./contexts/AuthContext";
+import AuthWrapper from "./components/auth/AuthWrapper";
+import Navbar from "./components/common/Navbar";
+import JwtNavbar from "./components/common/JwtNavbar";
+import Home from "./pages/Home";
+import ClerkLogin from "./pages/ClerkLogin";
+import ClerkRegister from "./pages/ClerkRegister";
+import CustomRegister from "./pages/CustomRegister";
+import CustomLogin from "./pages/CustomLogin";
+import TestBackend from "./pages/TestBackend";
+import RedirectionTest from "./pages/RedirectionTest";
+import CompanyDashboardAPITest from "./pages/CompanyDashboardAPITest";
+import Dashboard from "./pages/Dashboard";
+import Opportunities from "./pages/Opportunities";
+import OpportunityDetail from "./pages/OpportunityDetail";
+import Entreprises from "./pages/Entreprises";
+import Candidatures from "./pages/Candidatures";
+import Profil from "./pages/Profil";
+import Ressources from "./pages/Ressources";
+import Statistiques from "./pages/Statistiques";
+// New etudiant pages
+import OffresListe from "./pages/etudiant/OffresListe";
+import DokartiHomepage from "./pages/DokartiHomepage";
+// Role-based components
+import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
+// Role-specific dashboards
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import RoleSelection from "./pages/RoleSelection";
+import SetupInstructions from "./pages/SetupInstructions";
+import ComprehensiveRoleSelection from "./pages/ComprehensiveRoleSelection";
+import CompanyDashboard from "./pages/company/CompanyDashboard";
 
 function Layout({ children }) {
   const location = useLocation();
-  const hideNav = ['/login','/register'].includes(location.pathname);
+  const hideNav = [
+    "/login",
+    "/register",
+    "/sign-in",
+    "/sign-up",
+    "/",
+    "/select-role",
+    "/setup-instructions",
+    "/comprehensive-role-selection",
+  ].includes(location.pathname);
   return (
     <>
-      {!hideNav && <Navbar />}
-      <main>{children}</main>
+      {!hideNav && <JwtNavbar />}
+      <main className={hideNav ? "" : "pt-0"}>{children}</main>
     </>
   );
 }
 
-function PrivateRoute({ children }) {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
+function ProtectedRoute({ children }) {
+  return <SignedIn>{children}</SignedIn>;
 }
 
 export default function App() {
-  useEffect(()=> {
-    const t = localStorage.getItem('token');
-    if (t) setToken(t);
-  }, []);
-
   return (
-    <Layout>
-      <Routes>
-        <Route path="/login" element={<Login/>} />
-        <Route path="/register" element={<Register/>} />
-        <Route path="/dashboard" element={<PrivateRoute><Dashboard/></PrivateRoute>} />
-        <Route path="/opportunities" element={<PrivateRoute><Opportunities/></PrivateRoute>} />
-        <Route path="/opportunite/:id" element={<PrivateRoute><OpportunityDetail/></PrivateRoute>} />
-        <Route path="/entreprises" element={<PrivateRoute><Entreprises/></PrivateRoute>} />
-        <Route path="/candidatures" element={<PrivateRoute><Candidatures/></PrivateRoute>} />
-        <Route path="/profil" element={<PrivateRoute><Profil/></PrivateRoute>} />
-        <Route path="/ressources" element={<PrivateRoute><Ressources/></PrivateRoute>} />
-        <Route path="/statistiques" element={<PrivateRoute><Statistiques/></PrivateRoute>} />
-        <Route path="*" element={<Navigate to="/dashboard" />} />
-      </Routes>
-    </Layout>
+    <AuthProvider>
+      <AuthWrapper>
+        <Layout>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+
+            {/* Authentication Routes */}
+            <Route path="/login" element={<CustomLogin />} />
+            <Route path="/register" element={<CustomRegister />} />
+            <Route path="/sign-in" element={<CustomLogin />} />
+            <Route path="/sign-up" element={<CustomRegister />} />
+
+            {/* Role Selection */}
+            <Route path="/select-role" element={<RoleSelection />} />
+            <Route
+              path="/comprehensive-role-selection"
+              element={<ComprehensiveRoleSelection />}
+            />
+            <Route path="/setup-instructions" element={<SetupInstructions />} />
+
+            {/* Test Backend Route */}
+            <Route path="/test-backend" element={<TestBackend />} />
+            <Route path="/test-redirect" element={<RedirectionTest />} />
+            <Route path="/test-company-api" element={<CompanyDashboardAPITest />} />
+
+            {/* Student Routes */}
+            <Route
+              path="/dokarti"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["student"]}
+                  fallbackRoute="/login"
+                >
+                  <DokartiHomepage />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/etudiant/offres"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["student"]}
+                  fallbackRoute="/login"
+                >
+                  <OffresListe />
+                </RoleProtectedRoute>
+              }
+            />
+
+            {/* Company Routes */}
+            <Route
+              path="/company/dashboard"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["company"]}
+                  fallbackRoute="/login"
+                >
+                  <CompanyDashboard />
+                </RoleProtectedRoute>
+              }
+            />
+
+            {/* Admin Routes */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["admin"]}
+                  fallbackRoute="/login"
+                >
+                  <AdminDashboard />
+                </RoleProtectedRoute>
+              }
+            />
+
+            {/* Legacy Protected Routes (accessible by all authenticated users) */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/opportunities"
+              element={
+                <ProtectedRoute>
+                  <Opportunities />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/opportunite/:id"
+              element={
+                <ProtectedRoute>
+                  <OpportunityDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/entreprises"
+              element={
+                <ProtectedRoute>
+                  <Entreprises />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/candidatures"
+              element={
+                <ProtectedRoute>
+                  <Candidatures />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profil"
+              element={
+                <ProtectedRoute>
+                  <Profil />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ressources"
+              element={
+                <ProtectedRoute>
+                  <Ressources />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/statistiques"
+              element={
+                <ProtectedRoute>
+                  <Statistiques />
+                </ProtectedRoute>
+              }
+            />
+            {/* Redirect to home for unknown routes */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Layout>
+      </AuthWrapper>
+    </AuthProvider>
   );
 }

@@ -11,7 +11,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'kandra_spray_info_secret_key_2025'
 export async function register(req, res) {
   try {
     const { email, password, nom, prenom, role, telephone, matricule, raisonSociale } = req.body;
-    
     // Validation des champs requis
     if (!email || !password || !nom || !prenom || !role) {
       return res.status(400).json({ 
@@ -68,8 +67,20 @@ export async function register(req, res) {
       });
     }
 
+    // Create JWT token for immediate login
+    const token = jwt.sign(
+      { 
+        id: userId, 
+        email: createdUser[0].email, 
+        role: createdUser[0].role 
+      }, 
+      JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
+
     res.status(201).json({ 
       message: 'Inscription réussie',
+      token,
       user: {
         id: userId,
         email: createdUser[0].email,

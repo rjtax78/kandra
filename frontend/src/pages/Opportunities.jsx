@@ -1,18 +1,29 @@
 import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import API from '../services/api';
 import Card from '../components/Card';
 import Loader from '../components/Loader';
 import { Link } from 'react-router-dom';
+import { mockOffres } from '../data/mockOffres';
 
 export default function Opportunities() {
+  // Redirect to the new etudiant opportunities page
+  return <Navigate to="/etudiant/offres" replace />;
+  
+  // Keeping the old implementation commented for reference
+  /*
   const [ops, setOps] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    API.get('/opportunite')
-      .then(({ data }) => setOps(data))
-      .catch(console.error)
-      .finally(()=>setLoading(false));
+    // Use mock data for now
+    setOps(mockOffres);
+    setLoading(false);
+    
+    // API.get('/opportunite')
+    //   .then(({ data }) => setOps(data))
+    //   .catch(console.error)
+    //   .finally(()=>setLoading(false));
   }, []);
 
   if (loading) return <Loader/>;
@@ -30,4 +41,5 @@ export default function Opportunities() {
       ))}
     </div>
   );
+  */
 }
