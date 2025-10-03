@@ -3,6 +3,7 @@ import authSlice from './slices/authSlice';
 import jobSlice from './slices/jobSlice';
 import filterSlice from './slices/filterSlice';
 import companySlice from './slices/companySlice';
+import applicationsSlice from './slices/applicationsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     jobs: jobSlice,
     filters: filterSlice,
     company: companySlice,
+    applications: applicationsSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -32,6 +32,8 @@ import RoleSelection from "./pages/RoleSelection";
 import SetupInstructions from "./pages/SetupInstructions";
 import ComprehensiveRoleSelection from "./pages/ComprehensiveRoleSelection";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
+import PostJob from "./pages/company/PostJob";
+import Applications from "./pages/company/Applications";
 
 function Layout({ children }) {
   const location = useLocation();
@@ -118,6 +120,39 @@ export default function App() {
                   fallbackRoute="/login"
                 >
                   <CompanyDashboard />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/company/post-job"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["company"]}
+                  fallbackRoute="/login"
+                >
+                  <PostJob />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/company/applications"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["company"]}
+                  fallbackRoute="/login"
+                >
+                  <Applications />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/company/applications/:jobId"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["company"]}
+                  fallbackRoute="/login"
+                >
+                  <Applications />
                 </RoleProtectedRoute>
               }
             />
