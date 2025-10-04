@@ -20,53 +20,32 @@ const BulkActionsBar = ({ selectedCount, onBulkAction, selectedApplications, onC
 
   const bulkActions = [
     {
-      id: 'under_review',
-      label: 'Mark as Under Review',
+      id: 'en_cours',
+      label: 'Marquer en Cours',
       icon: Eye,
       color: 'text-yellow-600',
-      description: 'Move selected applications to under review'
+      description: 'Mettre les candidatures sélectionnées en cours d\'examen'
     },
     {
-      id: 'shortlisted',
-      label: 'Shortlist',
-      icon: Star,
-      color: 'text-purple-600',
-      description: 'Add to shortlist for interview consideration'
-    },
-    {
-      id: 'interviewed',
-      label: 'Mark as Interviewed',
-      icon: Calendar,
-      color: 'text-orange-600',
-      description: 'Mark applications as interviewed'
-    },
-    {
-      id: 'hired',
-      label: 'Hire',
+      id: 'acceptee',
+      label: 'Accepter',
       icon: CheckCircle,
       color: 'text-green-600',
-      description: 'Mark as hired'
+      description: 'Accepter les candidatures sélectionnées'
     },
     {
-      id: 'rejected',
-      label: 'Reject',
+      id: 'refusee',
+      label: 'Refuser',
       icon: XCircle,
       color: 'text-red-600',
-      description: 'Reject selected applications'
+      description: 'Refuser les candidatures sélectionnées'
     },
     {
-      id: 'on_hold',
-      label: 'Put On Hold',
+      id: 'annulee',
+      label: 'Annuler',
       icon: Clock,
       color: 'text-gray-600',
-      description: 'Put applications on hold'
-    },
-    {
-      id: 'archive',
-      label: 'Archive',
-      icon: Archive,
-      color: 'text-gray-600',
-      description: 'Archive selected applications'
+      description: 'Annuler les candidatures sélectionnées'
     }
   ];
 
@@ -129,28 +108,28 @@ const BulkActionsBar = ({ selectedCount, onBulkAction, selectedApplications, onC
                 variant="outline"
                 size="sm"
                 className="bg-transparent border-blue-400 text-white hover:bg-blue-500"
-                onClick={() => handleAction('under_review')}
+                onClick={() => handleAction('en_cours')}
               >
                 <Eye className="h-4 w-4 mr-1" />
-                Review
+                En Cours
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="bg-transparent border-blue-400 text-white hover:bg-blue-500"
-                onClick={() => handleAction('shortlisted')}
+                onClick={() => handleAction('acceptee')}
               >
                 <Star className="h-4 w-4 mr-1" />
-                Shortlist
+                Accepter
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="bg-transparent border-red-400 text-white hover:bg-red-500"
-                onClick={() => handleAction('rejected')}
+                onClick={() => handleAction('refusee')}
               >
                 <XCircle className="h-4 w-4 mr-1" />
-                Reject
+                Refuser
               </Button>
             </div>
 

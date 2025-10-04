@@ -149,14 +149,14 @@ export const AuthProvider = ({ children }) => {
     switch (normalizedRole) {
       case 'etudiant':
       case 'student':
-        return '/dokarti';
+        return '/student/dashboard';
       case 'entreprise':
       case 'company':
         return '/company/dashboard';
       case 'admin':
         return '/admin/dashboard';
       default:
-        return '/dokarti';
+        return '/student/dashboard';
     }
   }, [userRole]);
 

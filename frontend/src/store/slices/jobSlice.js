@@ -184,15 +184,16 @@ const jobSlice = createSlice({
       })
       .addCase(fetchJobs.fulfilled, (state, action) => {
         state.isLoading = false;
-        const { data, pagination } = action.payload;
+        const { data, pagination } = action.payload || {};
+        const jobsData = data || [];
         
         if (state.currentPage === 1) {
-          state.jobs = data;
+          state.jobs = jobsData;
         } else {
-          state.jobs = [...state.jobs, ...data];
+          state.jobs = [...state.jobs, ...jobsData];
         }
         
-        state.totalJobs = pagination?.total || data.length;
+        state.totalJobs = pagination?.total || jobsData.length;
         state.totalPages = pagination?.totalPages || 1;
         state.hasMore = pagination?.hasMore || false;
       })

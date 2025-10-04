@@ -1,6 +1,6 @@
 import { db } from '../db/drizzle.js';
 import { offres, entreprises, offresStage, offresEmploi, candidatures } from '../db/schema.js';
-import { eq, desc, count, and } from 'drizzle-orm';
+import { eq, desc, count, and, or, like, gte, lte } from 'drizzle-orm';
 
 export async function createOpportunite(req, res) {
   try {
@@ -89,7 +89,24 @@ export async function createOpportunite(req, res) {
 
 export async function listOpportunites(req, res) {
   try {
-    const { typeOffre, statut, limit = 100 } = req.query;
+    const { 
+      typeOffre, 
+      statut, 
+      search, 
+      category, 
+      experienceLevel, 
+      salaryMin, 
+      salaryMax,
+      limit = 100, 
+      offset = 0 
+    } = req.query;
+    
+    console.log('\n🔍 ===== OPPORTUNITES API REQUEST =====');
+    console.log('🔍 Backend received filters:', req.query);
+    console.log('🔍 Request headers:', {
+      'user-agent': req.headers['user-agent'],
+      'authorization': req.headers.authorization ? 'Bearer [TOKEN]' : 'No auth header'
+    });
     
     // Construire la requête avec les filtres
     let query = db.select({
@@ -103,29 +120,124 @@ export async function listOpportunites(req, res) {
       dateExpiration: offres.dateExpiration,
       statut: offres.statut,
       nombrePostes: offres.nombrePostes,
+      niveauEtude: offres.niveauEtude,
+      competencesRequises: offres.competencesRequises,
       entrepriseNom: entreprises.raisonSociale,
-      entrepriseId: entreprises.id
+      entrepriseId: entreprises.id,
+      entrepriseSecteur: entreprises.secteurActivite
     })
     .from(offres)
     .leftJoin(entreprises, eq(offres.entrepriseId, entreprises.id))
     .orderBy(desc(offres.datePublication))
-    .limit(parseInt(limit));
+    .limit(parseInt(limit))
+    .offset(parseInt(offset));
 
-    // Appliquer les filtres si spécifiés
-    if (typeOffre) {
-      query = query.where(eq(offres.typeOffre, typeOffre));
-    }
+    // Build WHERE conditions array
+    const whereConditions = [];
+    
+    // Default: only show published jobs
     if (statut) {
-      query = query.where(eq(offres.statut, statut));
+      whereConditions.push(eq(offres.statut, statut));
     } else {
-      // Par défaut, ne montrer que les offres publiées
-      query = query.where(eq(offres.statut, 'publiee'));
+      whereConditions.push(eq(offres.statut, 'publiee'));
+    }
+    
+    // Filter by job type (emploi, stage, freelance, etc.)
+    if (typeOffre && typeOffre !== 'all' && typeOffre !== 'anytime') {
+      whereConditions.push(eq(offres.typeOffre, typeOffre));
+      console.log('✅ Adding typeOffre filter:', typeOffre);
+    }
+    
+    // Apply WHERE conditions
+    if (whereConditions.length > 0) {
+      query = whereConditions.length === 1 ? 
+        query.where(whereConditions[0]) : 
+        query.where(and(...whereConditions));
     }
 
-    const result = await query;
+    let result = await query;
+    console.log('📊 Database returned', result.length, 'jobs before client-side filtering');
+    
+    // Apply client-side filtering for complex searches
+    // (Note: In production, these should be moved to SQL WHERE clauses for better performance)
+    
+    // Text search in title, description, or company name
+    if (search && search.trim()) {
+      const searchTerm = search.trim().toLowerCase();
+      result = result.filter(job => 
+        job.titre?.toLowerCase().includes(searchTerm) ||
+        job.description?.toLowerCase().includes(searchTerm) ||
+        job.entrepriseNom?.toLowerCase().includes(searchTerm) ||
+        job.competencesRequises?.toLowerCase().includes(searchTerm)
+      );
+      console.log('🔍 After search filtering:', result.length, 'jobs');
+    }
+    
+    // Category filtering (map to company sector for now)
+    if (category && category !== 'anytime' && category !== 'all') {
+      result = result.filter(job => {
+        const sector = job.entrepriseSecteur?.toLowerCase() || '';
+        switch (category.toLowerCase()) {
+          case 'design':
+            return sector.includes('design') || sector.includes('créatif') || sector.includes('graphique');
+          case 'development':
+            return sector.includes('informatique') || sector.includes('technologie') || sector.includes('logiciel') || sector.includes('it');
+          case 'marketing':
+            return sector.includes('marketing') || sector.includes('communication') || sector.includes('publicité');
+          case 'finance':
+            return sector.includes('finance') || sector.includes('banque') || sector.includes('comptabilité');
+          case 'sales':
+            return sector.includes('vente') || sector.includes('commercial');
+          default:
+            return true;
+        }
+      });
+      console.log('🏷️ After category filtering:', result.length, 'jobs');
+    }
+    
+    // Experience level filtering (map to niveauEtude for now)
+    if (experienceLevel && experienceLevel !== 'all') {
+      result = result.filter(job => {
+        const niveau = job.niveauEtude?.toLowerCase() || '';
+        switch (experienceLevel.toLowerCase()) {
+          case 'entry':
+            return niveau.includes('bac') || niveau.includes('débutant') || niveau.includes('junior');
+          case 'intermediate':
+            return niveau.includes('licence') || niveau.includes('master') || niveau.includes('expérience');
+          case 'expert':
+            return niveau.includes('doctorat') || niveau.includes('senior') || niveau.includes('expert');
+          default:
+            return true;
+        }
+      });
+      console.log('🎓 After experience filtering:', result.length, 'jobs');
+    }
+    
+    // Salary filtering
+    if ((salaryMin && parseInt(salaryMin) > 0) || (salaryMax && parseInt(salaryMax) > 0)) {
+      result = result.filter(job => {
+        if (!job.salaire) return true; // Include jobs without specified salary
+        
+        // Try to extract numeric value from salary string
+        const salaryText = job.salaire.toString();
+        const salaryMatch = salaryText.match(/(\d+)/g);
+        if (!salaryMatch) return true;
+        
+        const jobSalary = parseInt(salaryMatch[0]);
+        const minSal = salaryMin ? parseInt(salaryMin) : 0;
+        const maxSal = salaryMax ? parseInt(salaryMax) : Number.MAX_SAFE_INTEGER;
+        
+        return jobSalary >= minSal && jobSalary <= maxSal;
+      });
+      console.log('💰 After salary filtering:', result.length, 'jobs');
+    }
+    
+    console.log('✅ Final result count:', result.length);
+    console.log('🚀 Sending response to frontend...');
+    console.log('🔍 ===== END OPPORTUNITES API REQUEST =====\n');
     res.json(result);
   } catch (err) {
-    console.error('List offres error:', err);
+    console.error('❌ List offres error:', err);
     res.status(500).json({ error: 'Erreur serveur lors de la récupération des offres' });
   }
 }

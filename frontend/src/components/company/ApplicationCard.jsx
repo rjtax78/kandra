@@ -48,32 +48,34 @@ const ApplicationCard = ({
     const actions = [];
     
     switch (currentStatus) {
-      case 'applied':
+      case 'soumise':
         actions.push(
-          { id: 'under_review', label: 'Mark Under Review', icon: Eye, color: 'text-yellow-600' },
-          { id: 'rejected', label: 'Reject', icon: XCircle, color: 'text-red-600' }
+          { id: 'en_cours', label: 'Marquer en Cours', icon: Eye, color: 'text-yellow-600' },
+          { id: 'refusee', label: 'Refuser', icon: XCircle, color: 'text-red-600' }
         );
         break;
-      case 'under_review':
+      case 'en_cours':
         actions.push(
-          { id: 'shortlisted', label: 'Shortlist', icon: Star, color: 'text-purple-600' },
-          { id: 'rejected', label: 'Reject', icon: XCircle, color: 'text-red-600' }
+          { id: 'acceptee', label: 'Accepter', icon: CheckCircle, color: 'text-green-600' },
+          { id: 'refusee', label: 'Refuser', icon: XCircle, color: 'text-red-600' }
         );
         break;
-      case 'shortlisted':
+      case 'acceptee':
         actions.push(
-          { id: 'interviewed', label: 'Schedule Interview', icon: Calendar, color: 'text-orange-600' },
-          { id: 'rejected', label: 'Reject', icon: XCircle, color: 'text-red-600' }
+          { id: 'annulee', label: 'Annuler', icon: Clock, color: 'text-gray-600' }
         );
         break;
-      case 'interviewed':
+      case 'refusee':
         actions.push(
-          { id: 'hired', label: 'Hire', icon: CheckCircle, color: 'text-green-600' },
-          { id: 'rejected', label: 'Reject', icon: XCircle, color: 'text-red-600' },
-          { id: 'on_hold', label: 'Put On Hold', icon: Clock, color: 'text-gray-600' }
+          { id: 'en_cours', label: 'Remettre en Cours', icon: Eye, color: 'text-yellow-600' }
         );
         break;
       default:
+        actions.push(
+          { id: 'en_cours', label: 'Marquer en Cours', icon: Eye, color: 'text-yellow-600' },
+          { id: 'acceptee', label: 'Accepter', icon: CheckCircle, color: 'text-green-600' },
+          { id: 'refusee', label: 'Refuser', icon: XCircle, color: 'text-red-600' }
+        );
         break;
     }
     
@@ -99,16 +101,21 @@ const ApplicationCard = ({
               />
             </label>
             <div className="relative">
-              <img
-                src={application.candidatePhoto}
-                alt={application.candidateName}
-                className="w-12 h-12 rounded-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-                }}
-              />
-              {application.rating >= 4.5 && (
+              {application.candidatePhoto ? (
+                <img
+                  src={application.candidatePhoto}
+                  alt={application.candidateName}
+                  className="w-12 h-12 rounded-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className={`w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold ${application.candidatePhoto ? 'hidden' : 'flex'}`}>
+                {application.candidateName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+              </div>
+              {application.rating && application.rating >= 4.5 && (
                 <div className="absolute -top-1 -right-1 bg-yellow-400 text-white rounded-full p-1">
                   <Star className="h-3 w-3 fill-current" />
                 </div>
@@ -164,7 +171,7 @@ const ApplicationCard = ({
           {getStatusBadge(application.status)}
           <div className="flex items-center">
             <Star className="h-4 w-4 text-yellow-400 mr-1" />
-            <span className="text-sm font-medium text-gray-700">{application.rating}</span>
+            <span className="text-sm font-medium text-gray-700">{application.rating ? application.rating.toFixed(1) : 'N/A'}</span>
           </div>
         </div>
         <div className="text-xs text-gray-500">
@@ -180,21 +187,29 @@ const ApplicationCard = ({
         </div>
         <div className="flex items-center text-sm text-gray-600">
           <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-          <span>{application.education}</span>
+          <span>{typeof application.education === 'object' ? `${application.education?.niveau || 'N/A'} en ${application.education?.filiere || 'N/A'}` : application.education || 'Non renseigné'}</span>
         </div>
       </div>
 
       {/* Skills */}
       <div className="px-4 py-3 border-t border-gray-200">
         <div className="flex flex-wrap gap-2">
-          {application.skills.slice(0, 3).map((skill, index) => (
-            <Badge key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1">
-              {skill}
-            </Badge>
-          ))}
-          {application.skills.length > 3 && (
-            <Badge className="bg-gray-100 text-gray-700 text-xs px-2 py-1">
-              +{application.skills.length - 3} more
+          {application.skills && application.skills.length > 0 ? (
+            <>
+              {application.skills.slice(0, 3).map((skill, index) => (
+                <Badge key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1">
+                  {skill}
+                </Badge>
+              ))}
+              {application.skills.length > 3 && (
+                <Badge className="bg-gray-100 text-gray-700 text-xs px-2 py-1">
+                  +{application.skills.length - 3} more
+                </Badge>
+              )}
+            </>
+          ) : (
+            <Badge className="bg-gray-100 text-gray-500 text-xs px-2 py-1">
+              Aucune compétence renseignée
             </Badge>
           )}
         </div>

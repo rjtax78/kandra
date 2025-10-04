@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Bell, MessageSquare, Grid3X3, User, LogOut, Settings, Briefcase, Users, Building2, Home } from 'lucide-react';
+import { Search, Bell, MessageSquare, Grid3X3, User, LogOut, Settings, Briefcase, Users, Building2, Home, FileText } from 'lucide-react';
 import { getUserRole, USER_ROLES, getCurrentUser, clearAuthData, isAuthenticated, getUserDisplayName } from '../../utils/roleUtils';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -16,9 +16,9 @@ const JwtNavbar = () => {
     switch (userRole) {
       case USER_ROLES.STUDENT:
         return [
-          { name: 'Browse Jobs', href: '/dokarti', icon: Briefcase, active: location.pathname === '/dokarti' },
-          { name: 'My Applications', href: '/etudiant/applications', icon: User, active: location.pathname === '/etudiant/applications' },
-          { name: 'Profile', href: '/profile', icon: User, active: location.pathname === '/profile' },
+          { name: 'Browse Jobs', href: '/student/dashboard', icon: Briefcase, active: location.pathname === '/dokarti' },
+          { name: 'My Applications', href: '/student/applications', icon: FileText, active: location.pathname === '/student/applications' },
+          { name: 'Profile', href: '/student/profile', icon: User, active: location.pathname === '/student/profile' },
         ];
       case USER_ROLES.COMPANY:
         return [
@@ -175,7 +175,7 @@ const JwtNavbar = () => {
                   </div>
                   
                   <Link 
-                    to="/profile" 
+                    to={userRole === USER_ROLES.STUDENT ? '/student/profile' : '/profile'} 
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     onClick={() => setShowUserMenu(false)}
                   >

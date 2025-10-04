@@ -5,44 +5,105 @@ import { eq, and } from 'drizzle-orm';
 export async function updateProfilEtudiant(req, res) {
   try {
     const userId = req.user.id;
-    const { 
-      matricule, 
-      niveau, 
-      filiere, 
-      dateNaissance, 
-      competences: competencesIds,
-      photoProfile 
-    } = req.body;
+    const profileData = req.body;
+    
+    console.log('Profile update request for user:', userId);
+    console.log('Profile data received:', profileData);
 
-    // Vérifier que l'utilisateur est un étudiant
+    // First, check if user exists in users table
+    const userExists = await db.select()
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (userExists.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    // Update user basic information in users table
+    const userUpdateData = {};
+    if (profileData.firstName) userUpdateData.prenom = profileData.firstName;
+    if (profileData.lastName) userUpdateData.nom = profileData.lastName;
+    if (profileData.email) userUpdateData.email = profileData.email;
+    if (profileData.phone) userUpdateData.telephone = profileData.phone;
+
+    if (Object.keys(userUpdateData).length > 0) {
+      await db.update(users)
+        .set(userUpdateData)
+        .where(eq(users.id, userId));
+    }
+
+    // Check if student profile exists
     const etudiantExist = await db.select()
       .from(etudiants)
       .where(eq(etudiants.id, userId));
     
-    if (etudiantExist.length === 0) {
-      return res.status(403).json({ error: 'Profil étudiant non trouvé' });
+    // Student-specific information
+    const etudiantUpdateData = {};
+    if (profileData.level) etudiantUpdateData.niveau = profileData.level;
+    if (profileData.field) etudiantUpdateData.filiere = profileData.field;
+    if (profileData.university) {
+      // Store university as part of competences JSON or add to schema later
+      const currentCompetences = etudiantExist[0]?.competences ? 
+        JSON.parse(etudiantExist[0].competences) : {};
+      currentCompetences.university = profileData.university;
+      etudiantUpdateData.competences = JSON.stringify(currentCompetences);
+    }
+    if (profileData.graduationYear) {
+      const currentCompetences = etudiantExist[0]?.competences ? 
+        JSON.parse(etudiantExist[0].competences || '{}') : {};
+      currentCompetences.graduationYear = profileData.graduationYear;
+      etudiantUpdateData.competences = JSON.stringify(currentCompetences);
+    }
+    if (profileData.bio) {
+      const currentCompetences = etudiantExist[0]?.competences ? 
+        JSON.parse(etudiantExist[0].competences || '{}') : {};
+      currentCompetences.bio = profileData.bio;
+      currentCompetences.jobTitle = profileData.jobTitle;
+      currentCompetences.location = profileData.location;
+      // Store social links
+      currentCompetences.socialLinks = {
+        linkedin: profileData.linkedin || '',
+        github: profileData.github || '',
+        portfolio: profileData.portfolio || '',
+        website: profileData.website || ''
+      };
+      // Store skills and languages
+      if (profileData.skills) currentCompetences.skills = profileData.skills;
+      if (profileData.languages) currentCompetences.languages = profileData.languages;
+      if (profileData.projects) currentCompetences.projects = profileData.projects;
+      if (profileData.certifications) currentCompetences.certifications = profileData.certifications;
+      
+      etudiantUpdateData.competences = JSON.stringify(currentCompetences);
     }
 
-    // Mettre à jour les informations de l'étudiant
-    const updateData = {};
-    if (matricule) updateData.matricule = matricule;
-    if (niveau) updateData.niveau = niveau;
-    if (filiere) updateData.filiere = filiere;
-    if (dateNaissance) updateData.dateNaissance = new Date(dateNaissance);
-    if (photoProfile) updateData.photoProfile = photoProfile;
+    if (etudiantExist.length === 0) {
+      // Create new student profile if it doesn't exist
+      const newStudentData = {
+        id: userId,
+        matricule: `STU_${Date.now()}`, // Generate a unique matricule
+        niveau: profileData.level || 'Licence 1',
+        filiere: profileData.field || 'Non spécifié',
+        ...etudiantUpdateData
+      };
+      
+      await db.insert(etudiants).values(newStudentData);
+      console.log('Created new student profile for user:', userId);
+    } else if (Object.keys(etudiantUpdateData).length > 0) {
+      // Update existing student profile
+      await db.update(etudiants)
+        .set(etudiantUpdateData)
+        .where(eq(etudiants.id, userId));
+      console.log('Updated existing student profile for user:', userId);
+    }
 
-    await db.update(etudiants)
-      .set(updateData)
-      .where(eq(etudiants.id, userId));
-
-    // Mettre à jour les compétences si fournies
-    if (competencesIds && Array.isArray(competencesIds)) {
+    // Handle skills as competences if provided separately (legacy support)
+    if (profileData.competences && Array.isArray(profileData.competences)) {
       // Supprimer les anciennes compétences
       await db.delete(etudiantCompetences)
         .where(eq(etudiantCompetences.etudiantId, userId));
 
       // Ajouter les nouvelles compétences
-      for (const competenceData of competencesIds) {
+      for (const competenceData of profileData.competences) {
         await db.insert(etudiantCompetences).values({
           etudiantId: userId,
           competenceId: competenceData.competenceId,
@@ -55,12 +116,17 @@ export async function updateProfilEtudiant(req, res) {
     const profilMisAJour = await getProfilComplet(userId);
 
     res.json({
+      success: true,
       message: 'Profil mis à jour avec succès',
       profil: profilMisAJour
     });
   } catch (err) {
     console.error('Erreur lors de la mise à jour du profil:', err);
-    res.status(500).json({ error: 'Erreur serveur lors de la mise à jour du profil' });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur serveur lors de la mise à jour du profil',
+      details: err.message 
+    });
   }
 }
 
@@ -137,6 +203,35 @@ export async function getEtudiant(req, res) {
   } catch (err) {
     console.error('Erreur lors de la récupération de l\'étudiant:', err);
     res.status(500).json({ error: 'Erreur serveur lors de la récupération de l\'étudiant' });
+  }
+}
+
+// Legacy functions for backward compatibility
+export async function createCandidat(req, res) {
+  try {
+    // This would be handled by the registration process now
+    return updateProfilEtudiant(req, res);
+  } catch (err) {
+    console.error('Erreur lors de la création du candidat:', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la création du candidat' });
+  }
+}
+
+export async function listCandidats(req, res) {
+  try {
+    return listEtudiants(req, res);
+  } catch (err) {
+    console.error('Erreur lors de la récupération des candidats:', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération des candidats' });
+  }
+}
+
+export async function getCandidat(req, res) {
+  try {
+    return getEtudiant(req, res);
+  } catch (err) {
+    console.error('Erreur lors de la récupération du candidat:', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération du candidat' });
   }
 }
 
@@ -226,9 +321,59 @@ async function getProfilComplet(userId) {
     .from(candidatures)
     .where(eq(candidatures.etudiantId, userId));
 
+  // Parse the competences JSON to extract additional profile data
+  let parsedCompetences = {};
+  try {
+    parsedCompetences = etudiant.competences ? JSON.parse(etudiant.competences) : {};
+  } catch (error) {
+    console.error('Error parsing competences JSON:', error);
+    parsedCompetences = {};
+  }
+
   return {
-    ...etudiant,
-    competences: competencesEtudiant,
+    // Basic user info
+    id: etudiant.id,
+    firstName: etudiant.prenom,
+    lastName: etudiant.nom,
+    email: etudiant.email,
+    phone: etudiant.telephone,
+    
+    // Academic info
+    level: etudiant.niveau,
+    field: etudiant.filiere,
+    matricule: etudiant.matricule,
+    university: parsedCompetences.university || '',
+    graduationYear: parsedCompetences.graduationYear || '',
+    
+    // Profile info
+    bio: parsedCompetences.bio || '',
+    jobTitle: parsedCompetences.jobTitle || '',
+    location: parsedCompetences.location || '',
+    
+    // Social links
+    linkedin: parsedCompetences.socialLinks?.linkedin || '',
+    github: parsedCompetences.socialLinks?.github || '',
+    portfolio: parsedCompetences.socialLinks?.portfolio || '',
+    website: parsedCompetences.socialLinks?.website || '',
+    
+    // Skills and other data
+    skills: parsedCompetences.skills || [],
+    languages: parsedCompetences.languages || [],
+    projects: parsedCompetences.projects || [],
+    certifications: parsedCompetences.certifications || [],
+    
+    // Database competences (legacy)
+    databaseCompetences: competencesEtudiant,
+    
+    // Other fields
+    photoProfile: etudiant.photoProfile,
+    dateNaissance: etudiant.dateNaissance,
+    cv: etudiant.cv,
+    dateInscription: etudiant.dateInscription,
+    role: etudiant.role,
+    isActive: etudiant.isActive,
+    
+    // Statistics
     statistiques: {
       totalCandidatures: totalCandidatures.length
     }

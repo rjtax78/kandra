@@ -5,7 +5,9 @@ import {
   updateApplicationStatus,
   bulkUpdateApplications
 } from '../../store/slices/applicationsSlice';
+import companyApplicationsApi from '../../services/companyApplicationsApi';
 import { useParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { 
   Users, 
   Filter, 
@@ -45,6 +47,15 @@ const Applications = () => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showCandidateProfile, setShowCandidateProfile] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [applications, setApplications] = useState([]);
+  const [stats, setStats] = useState({});
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
 
   const [filters, setFilters] = useState({
     status: 'all',
@@ -57,127 +68,67 @@ const Applications = () => {
     sortOrder: 'desc'
   });
 
-  // Mock applications data
-  const applications = [
-    {
-      id: 1,
-      candidateId: 101,
-      jobId: jobId || 1,
-      candidateName: 'Sarah Johnson',
-      candidateEmail: 'sarah.johnson@email.com',
-      candidatePhone: '+1 (555) 123-4567',
-      candidateLocation: 'New York, NY',
-      candidatePhoto: 'https://images.unsplash.com/photo-1494790108755-2616b612b5bc?w=150',
-      position: 'Senior UI/UX Designer',
-      appliedDate: '2024-01-15T10:30:00Z',
-      status: 'under_review',
-      rating: 4.5,
-      experience: '5-8 years',
-      education: 'Bachelor in Design',
-      resumeUrl: '/documents/sarah-johnson-resume.pdf',
-      coverLetter: 'I am excited to apply for the Senior UI/UX Designer position...',
-      portfolio: 'https://sarahjohnson.design',
-      skills: ['Figma', 'Sketch', 'Adobe XD', 'Prototyping', 'User Research'],
-      notes: 'Strong portfolio, good communication skills',
-      interviewScheduled: null,
-      lastActivity: '2024-01-16T14:22:00Z'
-    },
-    {
-      id: 2,
-      candidateId: 102,
-      jobId: jobId || 1,
-      candidateName: 'Michael Chen',
-      candidateEmail: 'michael.chen@email.com',
-      candidatePhone: '+1 (555) 987-6543',
-      candidateLocation: 'San Francisco, CA',
-      candidatePhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      position: 'Senior UI/UX Designer',
-      appliedDate: '2024-01-14T09:15:00Z',
-      status: 'shortlisted',
-      rating: 4.8,
-      experience: '7-10 years',
-      education: 'Master in HCI',
-      resumeUrl: '/documents/michael-chen-resume.pdf',
-      coverLetter: 'With over 7 years of experience in UX design...',
-      portfolio: 'https://michaelchen.dev',
-      skills: ['React', 'Figma', 'Design Systems', 'A/B Testing', 'Analytics'],
-      notes: 'Excellent technical background',
-      interviewScheduled: '2024-01-20T15:00:00Z',
-      lastActivity: '2024-01-17T11:45:00Z'
-    },
-    {
-      id: 3,
-      candidateId: 103,
-      jobId: jobId || 1,
-      candidateName: 'Emily Rodriguez',
-      candidateEmail: 'emily.rodriguez@email.com',
-      candidatePhone: '+1 (555) 456-7890',
-      candidateLocation: 'Austin, TX',
-      candidatePhoto: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-      position: 'Senior UI/UX Designer',
-      appliedDate: '2024-01-13T16:45:00Z',
-      status: 'interviewed',
-      rating: 4.2,
-      experience: '4-6 years',
-      education: 'Bachelor in Psychology',
-      resumeUrl: '/documents/emily-rodriguez-resume.pdf',
-      coverLetter: 'I bring a unique perspective combining psychology and design...',
-      portfolio: 'https://emilyuxdesign.com',
-      skills: ['User Research', 'Wireframing', 'Usability Testing', 'Figma'],
-      notes: 'Great interview performance, strong user research skills',
-      interviewScheduled: '2024-01-18T10:00:00Z',
-      lastActivity: '2024-01-18T16:30:00Z'
-    },
-    {
-      id: 4,
-      candidateId: 104,
-      jobId: jobId || 1,
-      candidateName: 'David Kim',
-      candidateEmail: 'david.kim@email.com',
-      candidatePhone: '+1 (555) 321-0987',
-      candidateLocation: 'Seattle, WA',
-      candidatePhoto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-      position: 'Senior UI/UX Designer',
-      appliedDate: '2024-01-12T14:20:00Z',
-      status: 'rejected',
-      rating: 3.1,
-      experience: '2-4 years',
-      education: 'Bachelor in Computer Science',
-      resumeUrl: '/documents/david-kim-resume.pdf',
-      coverLetter: 'As a developer transitioning to UX design...',
-      portfolio: null,
-      skills: ['HTML/CSS', 'JavaScript', 'Basic Design'],
-      notes: 'Lacks design experience, strong technical background',
-      interviewScheduled: null,
-      lastActivity: '2024-01-15T09:10:00Z'
-    },
-    {
-      id: 5,
-      candidateId: 105,
-      jobId: jobId || 1,
-      candidateName: 'Lisa Thompson',
-      candidateEmail: 'lisa.thompson@email.com',
-      candidatePhone: '+1 (555) 654-3210',
-      candidateLocation: 'Remote',
-      candidatePhoto: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150',
-      position: 'Senior UI/UX Designer',
-      appliedDate: '2024-01-11T11:30:00Z',
-      status: 'hired',
-      rating: 4.9,
-      experience: '8+ years',
-      education: 'Master in Design',
-      resumeUrl: '/documents/lisa-thompson-resume.pdf',
-      coverLetter: 'I am thrilled to apply for this position...',
-      portfolio: 'https://lisathompsonux.com',
-      skills: ['Design Leadership', 'Strategy', 'Mentoring', 'Figma', 'Research'],
-      notes: 'Perfect fit, hired!',
-      interviewScheduled: null,
-      lastActivity: '2024-01-19T13:20:00Z'
+  // Fetch applications from backend
+  const fetchApplicationsData = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        jobId,
+        search: searchTerm,
+        ...filters,
+        page: pagination.page,
+        limit: pagination.limit
+      };
+      
+      // Remove 'all' values and empty search
+      Object.keys(params).forEach(key => {
+        if (params[key] === 'all' || params[key] === '') {
+          delete params[key];
+        }
+      });
+      
+      console.log('Fetching applications with params:', params);
+      const response = await companyApplicationsApi.getApplications(params);
+      
+      if (response.success) {
+        setApplications(response.data.applications || []);
+        setStats(response.data.stats || {});
+        setPagination(response.data.pagination || pagination);
+      } else {
+        toast.error('Erreur lors du chargement des candidatures');
+        setApplications([]);
+      }
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      toast.error('Erreur lors du chargement des candidatures');
+      setApplications([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchApplicationsData();
+    }, searchTerm ? 500 : 0); // 500ms delay for search, immediate for other changes
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  // Load applications when filters or pagination change (immediate)
+  useEffect(() => {
+    fetchApplicationsData();
+  }, [jobId, filters, pagination.page]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
+      'soumise': { color: 'bg-blue-100 text-blue-800', label: 'Soumise', icon: FileText },
+      'en_cours': { color: 'bg-yellow-100 text-yellow-800', label: 'En Cours', icon: Eye },
+      'acceptee': { color: 'bg-green-100 text-green-800', label: 'Acceptée', icon: CheckCircle },
+      'refusee': { color: 'bg-red-100 text-red-800', label: 'Refusée', icon: XCircle },
+      'annulee': { color: 'bg-gray-100 text-gray-800', label: 'Annulée', icon: Clock },
+      // Legacy statuses for compatibility
       'applied': { color: 'bg-blue-100 text-blue-800', label: 'Applied', icon: FileText },
       'under_review': { color: 'bg-yellow-100 text-yellow-800', label: 'Under Review', icon: Eye },
       'shortlisted': { color: 'bg-purple-100 text-purple-800', label: 'Shortlisted', icon: Star },
@@ -187,7 +138,7 @@ const Applications = () => {
       'on_hold': { color: 'bg-gray-100 text-gray-800', label: 'On Hold', icon: Clock }
     };
 
-    const config = statusConfig[status] || statusConfig['applied'];
+    const config = statusConfig[status] || statusConfig['soumise'];
     const Icon = config.icon;
 
     return (
@@ -198,53 +149,8 @@ const Applications = () => {
     );
   };
 
-  const filteredApplications = useMemo(() => {
-    let filtered = applications.filter(app => {
-      const matchesSearch = app.candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           app.candidateEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           app.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      const matchesStatus = filters.status === 'all' || app.status === filters.status;
-      const matchesExperience = filters.experience === 'all' || app.experience === filters.experience;
-      const matchesLocation = filters.location === 'all' || 
-                             app.candidateLocation.toLowerCase().includes(filters.location.toLowerCase());
-      const matchesRating = filters.rating === 'all' || app.rating >= parseFloat(filters.rating);
-
-      return matchesSearch && matchesStatus && matchesExperience && matchesLocation && matchesRating;
-    });
-
-    // Sort applications
-    filtered.sort((a, b) => {
-      let aValue, bValue;
-
-      switch (filters.sortBy) {
-        case 'name':
-          aValue = a.candidateName;
-          bValue = b.candidateName;
-          break;
-        case 'rating':
-          aValue = a.rating;
-          bValue = b.rating;
-          break;
-        case 'experience':
-          aValue = a.experience;
-          bValue = b.experience;
-          break;
-        case 'date':
-        default:
-          aValue = new Date(a.appliedDate);
-          bValue = new Date(b.appliedDate);
-      }
-
-      if (filters.sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-
-    return filtered;
-  }, [applications, searchTerm, filters]);
+  // Applications are now filtered on the backend, so we just use them directly
+  const filteredApplications = applications;
 
   const handleSelectApplication = (applicationId) => {
     setSelectedApplications(prev => {
@@ -269,30 +175,63 @@ const Applications = () => {
     }
   };
 
-  const handleStatusUpdate = (applicationId, newStatus) => {
-    // Implement status update logic
-    console.log('Update status:', applicationId, newStatus);
+  const handleStatusUpdate = async (applicationId, newStatus, notes = '') => {
+    try {
+      console.log('Update status:', applicationId, newStatus);
+      await companyApplicationsApi.updateApplicationStatus(applicationId, newStatus, notes);
+      toast.success('Statut mis à jour avec succès');
+      // Refresh applications list
+      fetchApplicationsData();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Erreur lors de la mise à jour du statut');
+    }
   };
 
-  const handleViewCandidate = (candidate) => {
-    setSelectedCandidate(candidate);
-    setShowCandidateProfile(true);
+  const handleViewCandidate = async (application) => {
+    try {
+      const candidateDetails = await companyApplicationsApi.getCandidateDetails(
+        application.id, 
+        application.candidateId
+      );
+      
+      // Ensure proper data formatting before setting candidate
+      const formattedCandidate = {
+        ...application,
+        ...candidateDetails.data,
+        // Ensure rating is a number
+        rating: typeof candidateDetails.data.rating === 'number' ? candidateDetails.data.rating : (application.rating || 0),
+        // Ensure skills is an array
+        skills: Array.isArray(candidateDetails.data.skills) ? candidateDetails.data.skills : (application.skills || []),
+        // Handle education object properly
+        education: candidateDetails.data.education || application.education || 'Non renseigné'
+      };
+      
+      setSelectedCandidate(formattedCandidate);
+      setShowCandidateProfile(true);
+    } catch (error) {
+      console.error('Error fetching candidate details:', error);
+      toast.error('Erreur lors du chargement du profil candidat');
+    }
   };
 
-  const handleBulkAction = (action, applicationIds) => {
-    console.log('Bulk action:', action, applicationIds);
-    // Implement bulk action logic
-    setSelectedApplications([]);
-    setShowBulkActions(false);
+  const handleBulkAction = async (action, applicationIds) => {
+    try {
+      console.log('Bulk action:', action, applicationIds);
+      await companyApplicationsApi.bulkUpdateApplications(applicationIds, action, '');
+      toast.success(`${applicationIds.length} candidature(s) mise(s) à jour`);
+      setSelectedApplications([]);
+      setShowBulkActions(false);
+      // Refresh applications list
+      fetchApplicationsData();
+    } catch (error) {
+      console.error('Error with bulk action:', error);
+      toast.error('Erreur lors de l\'action groupée');
+    }
   };
 
-  const statusCounts = useMemo(() => {
-    const counts = {};
-    applications.forEach(app => {
-      counts[app.status] = (counts[app.status] || 0) + 1;
-    });
-    return counts;
-  }, [applications]);
+  // Status counts come from the backend stats
+  const statusCounts = stats || {};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -313,8 +252,12 @@ const Applications = () => {
                 <Mail className="h-4 w-4" />
                 Email Templates
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <RefreshCw className="h-4 w-4 mr-2" />
+              <Button 
+                onClick={fetchApplicationsData}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
             </div>
@@ -327,8 +270,8 @@ const Applications = () => {
               <div className="text-sm text-blue-700">Total Applications</div>
             </div>
             <div className="bg-yellow-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-yellow-600">{statusCounts.under_review || 0}</div>
-              <div className="text-sm text-yellow-700">Under Review</div>
+              <div className="text-2xl font-bold text-yellow-600">{statusCounts.en_cours || 0}</div>
+              <div className="text-sm text-yellow-700">En Cours</div>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">
               <div className="text-2xl font-bold text-purple-600">{statusCounts.shortlisted || 0}</div>
@@ -339,16 +282,16 @@ const Applications = () => {
               <div className="text-sm text-orange-700">Interviewed</div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{statusCounts.hired || 0}</div>
-              <div className="text-sm text-green-700">Hired</div>
+              <div className="text-2xl font-bold text-green-600">{statusCounts.acceptee || 0}</div>
+              <div className="text-sm text-green-700">Acceptée</div>
             </div>
             <div className="bg-red-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-red-600">{statusCounts.rejected || 0}</div>
-              <div className="text-sm text-red-700">Rejected</div>
+              <div className="text-2xl font-bold text-red-600">{statusCounts.refusee || 0}</div>
+              <div className="text-sm text-red-700">Refusée</div>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-gray-600">{statusCounts.on_hold || 0}</div>
-              <div className="text-sm text-gray-700">On Hold</div>
+              <div className="text-2xl font-bold text-gray-600">{statusCounts.annulee || 0}</div>
+              <div className="text-sm text-gray-700">Annulée</div>
             </div>
           </div>
 
@@ -406,14 +349,12 @@ const Applications = () => {
                     onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="all">All Status</option>
-                    <option value="applied">Applied</option>
-                    <option value="under_review">Under Review</option>
-                    <option value="shortlisted">Shortlisted</option>
-                    <option value="interviewed">Interviewed</option>
-                    <option value="hired">Hired</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="on_hold">On Hold</option>
+                    <option value="all">Tous les Statuts</option>
+                    <option value="soumise">Soumise</option>
+                    <option value="en_cours">En Cours</option>
+                    <option value="acceptee">Acceptée</option>
+                    <option value="refusee">Refusée</option>
+                    <option value="annulee">Annulée</option>
                   </select>
                 </div>
                 <div>
@@ -505,6 +446,14 @@ const Applications = () => {
             setShowBulkActions(false);
           }}
         />
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="ml-3 text-lg text-gray-600">Chargement des candidatures...</span>
+        </div>
       )}
 
       {/* Applications Grid/List */}

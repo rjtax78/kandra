@@ -77,9 +77,21 @@ export async function postuler(req, res) {
     .orderBy(candidatures.createdAt)
     .limit(1);
 
+    // Transform response to match frontend expectations
+    const transformedApplication = {
+      _id: candidatureCreee[0].id,
+      jobId: candidatureCreee[0].offreId,
+      status: 'pending',
+      appliedAt: candidatureCreee[0].dateCandidature,
+      job: {
+        title: candidatureCreee[0].offreTitre,
+        company: candidatureCreee[0].entrepriseNom
+      }
+    };
+
     res.status(201).json({
-      message: 'Candidature soumise avec succès',
-      candidature: candidatureCreee[0]
+      message: 'Application submitted successfully!',
+      application: transformedApplication
     });
   } catch (err) {
     console.error('Erreur lors de la candidature:', err);
@@ -186,13 +198,94 @@ export async function listMesCandidatures(req, res) {
     .where(eq(candidatures.etudiantId, userId))
     .orderBy(candidatures.dateCandidature);
 
+    // Transform data to match frontend expectations
+    const applications = mesCandidatures.map(candidature => ({
+      _id: candidature.id,
+      jobId: candidature.offreId,
+      status: candidature.statut === 'soumise' ? 'pending' : 
+               candidature.statut === 'acceptee' ? 'accepted' : 
+               candidature.statut === 'refusee' ? 'rejected' : candidature.statut,
+      coverLetter: candidature.lettreMotivation,
+      appliedAt: candidature.dateCandidature,
+      createdAt: candidature.dateCandidature,
+      job: {
+        title: candidature.offreTitre,
+        company: candidature.entrepriseNom,
+        location: candidature.offreLocalisation,
+        type: candidature.offreTypeOffre
+      },
+      company: candidature.entrepriseNom,
+      jobTitle: candidature.offreTitre
+    }));
+
+    // Calculate stats
+    const stats = {
+      total: applications.length,
+      pending: applications.filter(app => app.status === 'pending').length,
+      accepted: applications.filter(app => app.status === 'accepted').length,
+      rejected: applications.filter(app => app.status === 'rejected').length
+    };
+
     res.json({
-      candidatures: mesCandidatures,
-      total: mesCandidatures.length
+      applications,
+      stats,
+      total: applications.length
     });
   } catch (err) {
     console.error('Erreur lors de la récupération des candidatures:', err);
     res.status(500).json({ error: 'Erreur serveur lors de la récupération de vos candidatures' });
+  }
+}
+
+export async function getCandidatureDetails(req, res) {
+  try {
+    const candidatureId = req.params.id;
+    const userId = req.user.id;
+
+    // Récupérer la candidature avec les détails
+    const candidatureDetails = await db.select({
+      id: candidatures.id,
+      dateCandidature: candidatures.dateCandidature,
+      statut: candidatures.statut,
+      lettreMotivation: candidatures.lettreMotivation,
+      cvJoint: candidatures.cvJoint,
+      commentaire: candidatures.commentaire,
+      // Détails de l'offre
+      offreId: offres.id,
+      offreTitre: offres.titre,
+      offreDescription: offres.description,
+      offreTypeOffre: offres.typeOffre,
+      offreLocalisation: offres.localisation,
+      offreSalaire: offres.salaire,
+      // Détails de l'entreprise
+      entrepriseNom: entreprises.raisonSociale,
+      entrepriseSecteur: entreprises.secteurActivite
+    })
+    .from(candidatures)
+    .leftJoin(offres, eq(candidatures.offreId, offres.id))
+    .leftJoin(entreprises, eq(offres.entrepriseId, entreprises.id))
+    .where(eq(candidatures.id, candidatureId));
+    
+    if (candidatureDetails.length === 0) {
+      return res.status(404).json({ error: 'Candidature non trouvée' });
+    }
+
+    const candidature = candidatureDetails[0];
+
+    // Vérifier que l'utilisateur est soit l'étudiant qui a postulé, soit l'entreprise
+    const isOwner = candidature.etudiantId === userId;
+    const isCompany = candidature.entrepriseId === userId;
+    
+    if (!isOwner && !isCompany) {
+      return res.status(403).json({ error: 'Accès non autorisé à cette candidature' });
+    }
+
+    res.json({
+      application: candidature
+    });
+  } catch (err) {
+    console.error('Erreur lors de la récupération des détails:', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération des détails' });
   }
 }
 

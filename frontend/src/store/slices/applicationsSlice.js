@@ -15,7 +15,7 @@ export const fetchApplications = createAsyncThunk(
         }
       });
 
-      const response = await API.get(`/applications?${queryParams}`);
+      const response = await API.get(`/company/applications?${queryParams}`);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch applications');
@@ -27,7 +27,7 @@ export const fetchApplicationById = createAsyncThunk(
   'applications/fetchApplicationById',
   async (applicationId, { rejectWithValue }) => {
     try {
-      const response = await API.get(`/applications/${applicationId}`);
+      const response = await API.get(`/company/applications/${applicationId}`);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch application');
@@ -39,9 +39,9 @@ export const updateApplicationStatus = createAsyncThunk(
   'applications/updateApplicationStatus',
   async ({ applicationId, status, note }, { rejectWithValue }) => {
     try {
-      const response = await API.patch(`/applications/${applicationId}/status`, {
-        status,
-        note
+      const response = await API.put(`/company/applications/${applicationId}/status`, {
+        status: status,
+        notes: note
       });
       return response.data;
     } catch (error) {
@@ -54,9 +54,9 @@ export const bulkUpdateApplications = createAsyncThunk(
   'applications/bulkUpdateApplications',
   async ({ applicationIds, action, data }, { rejectWithValue }) => {
     try {
-      const response = await API.patch('/applications/bulk', {
+      const response = await API.put('/company/applications/bulk-update', {
         applicationIds,
-        action,
+        status: action,
         ...data
       });
       return response.data;

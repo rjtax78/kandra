@@ -24,6 +24,9 @@ import Statistiques from "./pages/Statistiques";
 // New etudiant pages
 import OffresListe from "./pages/etudiant/OffresListe";
 import DokartiHomepage from "./pages/DokartiHomepage";
+// Student specific pages
+import MyApplications from "./pages/student/MyApplications";
+import Profile from "./pages/student/Profile";
 // Role-based components
 import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
 // Role-specific dashboards
@@ -107,6 +110,39 @@ export default function App() {
                   fallbackRoute="/login"
                 >
                   <OffresListe />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/dashboard"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["student"]}
+                  fallbackRoute="/login"
+                >
+                  <DokartiHomepage />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/applications"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["student"]}
+                  fallbackRoute="/login"
+                >
+                  <MyApplications />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/profile"
+              element={
+                <RoleProtectedRoute
+                  allowedRoles={["student"]}
+                  fallbackRoute="/login"
+                >
+                  <Profile />
                 </RoleProtectedRoute>
               }
             />
